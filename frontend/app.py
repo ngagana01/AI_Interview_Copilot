@@ -1,153 +1,111 @@
 import streamlit as st
 import sys
-import random
 import pandas as pd
+import random
 
 sys.path.append("backend")
 
 from similarity import similarity_score
 from evaluator import evaluate_answer
-from confidence import analyze_confidence
-from emotion import detect_emotion
-from resume import parse_resume
+from confidence import analyze_voice
+from question_generator import generate_question
 
 st.set_page_config(page_title="AI Interview Copilot",layout="wide")
 
-# ---------------- LOGIN SYSTEM ----------------
+st.markdown(
+"""
+<style>
+.main {background-color:#0e1117;color:white;}
+.stButton>button {border-radius:20px;height:3em;width:100%;}
+</style>
+""",unsafe_allow_html=True
+)
 
-if "user" not in st.session_state:
-    st.session_state.user=None
-
-def login():
-    st.title("Login")
-
-    username=st.text_input("Username")
-    password=st.text_input("Password",type="password")
-
-    if st.button("Login"):
-        if username and password:
-            st.session_state.user=username
-            st.success("Login Successful")
-            st.rerun()
-        else:
-            st.error("Enter credentials")
-
-if not st.session_state.user:
-    login()
-    st.stop()
+st.title("AI Interview Copilot")
 
 # ---------------- SIDEBAR ----------------
 
-st.sidebar.title("Candidate Panel")
+role=st.sidebar.selectbox("Select Role",
+["Data Scientist","Web Developer","AI Engineer"])
 
-job_role=st.sidebar.selectbox(
-    "Select Job Role",
-    ["Data Scientist","Web Developer","AI Engineer","ML Engineer","Full Stack Developer"]
-)
+difficulty=st.sidebar.selectbox("Difficulty",
+["Easy","Medium","Hard"])
 
-round_type=st.sidebar.selectbox(
-    "Interview Round",
-    ["HR Round","Technical Round","Coding Round","Aptitude Round"]
-)
+if "question" not in st.session_state:
+    st.session_state.question=""
 
-st.sidebar.write("Logged in as:",st.session_state.user)
+if st.sidebar.button("Generate Question"):
+    st.session_state.question=generate_question(role,difficulty)
 
-# ---------------- MAIN TITLE ----------------
+st.sidebar.write("Selected:",role,"-",difficulty)
 
-st.title("AI Interview Copilot Dashboard")
+# ---------------- QUESTION ----------------
 
-tab1,tab2,tab3,tab4=st.tabs(["Answer Evaluation","Voice Confidence","Resume Analysis","Performance Dashboard"])
+st.subheader("Interview Question")
+st.info(st.session_state.question if st.session_state.question else "Click generate")
 
-# ---------------- TAB 1 ----------------
+answer=st.text_area("Your Answer")
 
-with tab1:
+# ---------------- EVALUATION ----------------
 
-    st.subheader("Interview Practice")
+if st.button("Analyze Answer"):
 
-    q=st.text_area("Interview Question")
-    a=st.text_area("Your Answer")
+    if answer:
 
-    if st.button("Evaluate Answer"):
+        sim=similarity_score(st.session_state.question,answer)
+        result=evaluate_answer(answer)
 
-        score=similarity_score(q,a)
-        feedback=evaluate_answer(a)
+        st.success("Analysis Complete")
 
-        st.success("Evaluation Complete")
+        col1,col2=st.columns(2)
 
-        st.write("Similarity Score:",score,"%")
-        st.progress(score/100)
+        with col1:
+            st.metric("Answer Rating",result["rating"])
+            st.metric("Relevance Score",sim)
 
-        st.subheader("Feedback")
-        for f in feedback:
-            st.write("-",f)
+        with col2:
+            st.write("Strengths")
+            for s in result["strengths"]:
+                st.success(s)
 
-        # Save performance
-        st.session_state["score"]=score
+            st.write("Improvements")
+            for i in result["improvements"]:
+                st.warning(i)
 
+        # graph
+        chart=pd.DataFrame({
+            "Metric":["Rating","Relevance"],
+            "Score":[result["rating"]*10,sim]
+        })
 
-# ---------------- TAB 2 ----------------
+        st.bar_chart(chart.set_index("Metric"))
 
-with tab2:
+        st.subheader("Pro Tip")
+        st.info("Structure answers using STAR method: Situation, Task, Action, Result.")
 
-    audio=st.file_uploader("Upload Voice",type=["wav","mp3"])
+        st.subheader("Sample Strong Answer")
+        st.write("A strong answer explains concept clearly, gives example, and justifies reasoning.")
 
-    if audio:
+    else:
+        st.error("Enter answer first")
 
-        data=audio.read()
+# ---------------- VOICE ANALYSIS ----------------
 
-        conf=analyze_confidence(data)
-        emo=detect_emotion(data)
+st.divider()
+st.subheader("Voice Confidence Analysis")
 
-        st.write("Confidence Score:",conf["score"])
-        st.write("Confidence Level:",conf["label"])
-        st.write("Emotion:",emo)
+audio=st.file_uploader("Upload Voice",type=["wav","mp3"])
 
-        st.session_state["confidence"]=conf["score"]
+if audio:
+    data=audio.read()
+    conf,stress=analyze_voice(data)
 
+    st.metric("Confidence Level",conf)
+    st.metric("Stress Level",stress)
 
-# ---------------- TAB 3 ----------------
-
-with tab3:
-
-    file=st.file_uploader("Upload Resume PDF",type=["pdf"])
-
-    if file:
-
-        result=parse_resume(file)
-
-        st.write("Skills Detected:",result["skills"])
-        st.write("Resume Score:",result["score"])
-
-        st.session_state["resume"]=result["score"]
-
-
-# ---------------- TAB 4 DASHBOARD ----------------
-
-with tab4:
-
-    st.subheader("Performance Analytics")
-
-    score=st.session_state.get("score",random.randint(50,90))
-    conf=st.session_state.get("confidence",random.randint(50,90))
-    resume=st.session_state.get("resume",random.randint(50,90))
-
-    data=pd.DataFrame({
-        "Metric":["Answer Score","Confidence","Resume"],
-        "Value":[score,conf,resume]
+    df=pd.DataFrame({
+        "Metric":["Confidence","Stress"],
+        "Value":[conf,stress]
     })
 
-    st.bar_chart(data.set_index("Metric"))
-
-    st.write("Selected Role:",job_role)
-    st.write("Interview Type:",round_type)
-
-    avg=(score+conf+resume)/3
-
-    st.metric("Overall Performance",round(avg,2))
-
-    if avg>80:
-        st.success("Excellent Interview Readiness")
-    elif avg>60:
-        st.info("Good, but needs improvement")
-    else:
-        st.warning("Needs Practice")
+    st.line_chart(df.set_index("Metric"))
