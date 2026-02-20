@@ -1,6 +1,5 @@
 import sys
-import os
-sys.path.append(os.path.abspath("../backend"))
+sys.path.append("backend")
 from backend.ai_engine import interviewer_chat, score_resume
 from resume import parse_resume
 import streamlit as st
