@@ -1,13 +1,9 @@
-import numpy as np
+def analyze_voice(audio_bytes):
 
-def analyze_confidence(audio_bytes):
-    size=len(audio_bytes)
+    length=len(audio_bytes)
 
-    score=min(100,max(20,size/1000))
+    confidence=min(100,length/800)
 
-    if score>75: label="Very Confident"
-    elif score>55: label="Moderately Confident"
-    elif score>35: label="Nervous"
-    else: label="Low Confidence"
+    stress=max(0,100-confidence)
 
-    return {"score":round(score,2),"label":label}
+    return round(confidence,2), round(stress,2)
