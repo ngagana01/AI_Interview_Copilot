@@ -1,7 +1,7 @@
 import os
 import requests
 
-API_KEY = os.getenv("API_KEY")
+API_KEY = st.secrets["API_KEY"]
 
 def ask_ai(prompt):
 
