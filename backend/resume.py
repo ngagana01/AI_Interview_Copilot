@@ -1,13 +1,25 @@
-st.divider()
-st.header("AI Resume Evaluation")
+import re
 
-file=st.file_uploader("Upload Resume",type=["pdf"])
+def parse_resume(file):
+    text = file.read().decode("utf-8", errors="ignore")
 
-if file:
+    skills = []
 
-    text=parse_resume(file)
+    skill_keywords = [
+        "python","machine learning","deep learning","nlp",
+        "sql","javascript","react","node","flask",
+        "django","tensorflow","pytorch","data analysis"
+    ]
 
-    result=score_resume(text,role)
+    for skill in skill_keywords:
+        if skill.lower() in text.lower():
+            skills.append(skill)
 
-    st.success("AI Resume Analysis")
-    st.write(result)
+    score = min(len(skills)*10, 100)
+
+    return {
+        "skills": skills,
+        "score": score,
+        "strength": "Good technical background" if score>60 else "Needs improvement",
+        "improve": "Add more quantified achievements"
+    }
