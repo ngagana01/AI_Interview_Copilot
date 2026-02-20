@@ -1,8 +1,8 @@
 import os
 import requests
 
-API_KEY = st.secrets["API_KEY"]
 
+API_KEY = os.getenv("API_KEY")
 def ask_ai(prompt):
 
     url="https://api.openai.com/v1/chat/completions"
