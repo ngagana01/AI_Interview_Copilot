@@ -1,8 +1,13 @@
-import PyPDF2
+st.divider()
+st.header("AI Resume Evaluation")
 
-def parse_resume(file):
-    reader=PyPDF2.PdfReader(file)
-    text=""
-    for page in reader.pages:
-        text+=page.extract_text()
-    return text
+file=st.file_uploader("Upload Resume",type=["pdf"])
+
+if file:
+
+    text=parse_resume(file)
+
+    result=score_resume(text,role)
+
+    st.success("AI Resume Analysis")
+    st.write(result)
