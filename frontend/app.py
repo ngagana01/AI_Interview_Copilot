@@ -1,3 +1,5 @@
+from ai_engine import interviewer_chat, score_resume
+from resume import parse_resume
 import streamlit as st
 import sys
 import pandas as pd
