@@ -2,10 +2,11 @@ import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from backend.ai_engine import interviewer_chat, score_resume
-from resume import parse_resume
+
 import streamlit as st
 import random
 import pandas as pd
+from backend.resume import parse_resume
 
 st.set_page_config(page_title="AI Interview Copilot", layout="wide")
 
