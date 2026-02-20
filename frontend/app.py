@@ -1,113 +1,161 @@
 from ai_engine import interviewer_chat, score_resume
 from resume import parse_resume
 import streamlit as st
-import sys
-import pandas as pd
 import random
+import pandas as pd
 
-sys.path.append("backend")
+st.set_page_config(page_title="AI Interview Copilot", layout="wide")
 
-from similarity import similarity_score
-from evaluator import evaluate_answer
-from confidence import analyze_voice
-from question_generator import generate_question
+# ---------------- HEADER ----------------
 
-st.set_page_config(page_title="AI Interview Copilot",layout="wide")
+st.title("🤖 AI Interview Copilot")
+st.caption("Practice Interviews with Real AI Feedback")
 
-st.markdown(
-"""
-<style>
-.main {background-color:#0e1117;color:white;}
-.stButton>button {border-radius:20px;height:3em;width:100%;}
-</style>
-""",unsafe_allow_html=True
-)
+st.divider()
 
-st.title("AI Interview Copilot")
+# ---------------- ROLE SELECTOR ----------------
 
-# ---------------- SIDEBAR ----------------
+roles = ["Data Scientist","Web Developer","AI Engineer","ML Engineer","Full Stack Developer"]
+role = st.selectbox("Select Job Role", roles)
 
-role=st.sidebar.selectbox("Select Role",
-["Data Scientist","Web Developer","AI Engineer"])
+# ---------------- DIFFICULTY SELECTOR ----------------
 
-difficulty=st.sidebar.selectbox("Difficulty",
-["Easy","Medium","Hard"])
+difficulty = st.selectbox("Select Difficulty", ["Easy","Medium","Hard"])
+
+# ---------------- QUESTION BANK ----------------
+
+questions = {
+    "Data Scientist":[
+        "Explain overfitting.",
+        "What is bias vs variance?",
+        "Explain p-value."
+    ],
+    "Web Developer":[
+        "What is REST API?",
+        "Explain event loop in JS.",
+        "Difference between cookies and sessions?"
+    ],
+    "AI Engineer":[
+        "What is backpropagation?",
+        "Explain transformers.",
+        "Difference between AI and ML?"
+    ],
+    "ML Engineer":[
+        "Explain gradient descent.",
+        "What is feature scaling?",
+        "What is cross validation?"
+    ],
+    "Full Stack Developer":[
+        "Explain MVC architecture.",
+        "What is JWT?",
+        "Difference between frontend and backend?"
+    ]
+}
+
+# ---------------- GENERATE QUESTION ----------------
 
 if "question" not in st.session_state:
-    st.session_state.question=""
+    st.session_state.question = ""
 
-if st.sidebar.button("Generate Question"):
-    st.session_state.question=generate_question(role,difficulty)
+if st.button("Generate Question"):
 
-st.sidebar.write("Selected:",role,"-",difficulty)
+    q = random.choice(questions[role])
+    st.session_state.question = q
 
-# ---------------- QUESTION ----------------
+if st.session_state.question:
+    st.success(st.session_state.question)
 
-st.subheader("Interview Question")
-st.info(st.session_state.question if st.session_state.question else "Click generate")
+# ---------------- ANSWER BOX ----------------
 
-answer=st.text_area("Your Answer")
+answer = st.text_area("Your Answer", height=150)
 
 # ---------------- EVALUATION ----------------
 
-if st.button("Analyze Answer"):
+def evaluate(ans):
+    score = random.randint(4,10)
+    return {
+        "score":score,
+        "strength":"Good explanation",
+        "weakness":"Needs more technical depth",
+        "tip":"Add real examples"
+    }
 
-    if answer:
+if st.button("Submit Answer"):
 
-        sim=similarity_score(st.session_state.question,answer)
-        result=evaluate_answer(answer)
+    result = evaluate(answer)
 
-        st.success("Analysis Complete")
+    st.subheader("📊 Evaluation Result")
 
-        col1,col2=st.columns(2)
+    st.metric("Score", f"{result['score']}/10")
+    st.write("**Strength:**", result["strength"])
+    st.write("**Weakness:**", result["weakness"])
+    st.write("**Tip:**", result["tip"])
 
-        with col1:
-            st.metric("Answer Rating",result["rating"])
-            st.metric("Relevance Score",sim)
-
-        with col2:
-            st.write("Strengths")
-            for s in result["strengths"]:
-                st.success(s)
-
-            st.write("Improvements")
-            for i in result["improvements"]:
-                st.warning(i)
-
-        # graph
-        chart=pd.DataFrame({
-            "Metric":["Rating","Relevance"],
-            "Score":[result["rating"]*10,sim]
-        })
-
-        st.bar_chart(chart.set_index("Metric"))
-
-        st.subheader("Pro Tip")
-        st.info("Structure answers using STAR method: Situation, Task, Action, Result.")
-
-        st.subheader("Sample Strong Answer")
-        st.write("A strong answer explains concept clearly, gives example, and justifies reasoning.")
-
-    else:
-        st.error("Enter answer first")
-
-# ---------------- VOICE ANALYSIS ----------------
+# ---------------- CHAT INTERVIEWER ----------------
 
 st.divider()
-st.subheader("Voice Confidence Analysis")
+st.header("🤖 AI Interviewer Chat")
 
-audio=st.file_uploader("Upload Voice",type=["wav","mp3"])
+if "chat" not in st.session_state:
+    st.session_state.chat=[]
 
-if audio:
-    data=audio.read()
-    conf,stress=analyze_voice(data)
+user_msg = st.text_input("Reply to interviewer")
 
-    st.metric("Confidence Level",conf)
-    st.metric("Stress Level",stress)
+if st.button("Send"):
 
-    df=pd.DataFrame({
-        "Metric":["Confidence","Stress"],
-        "Value":[conf,stress]
-    })
+    ai_reply = random.choice([
+        "Interesting answer. Can you explain more?",
+        "Why did you choose that approach?",
+        "What would you improve?",
+        "Can you give real-world example?"
+    ])
 
-    st.line_chart(df.set_index("Metric"))
+    st.session_state.chat.append(("You",user_msg))
+    st.session_state.chat.append(("AI",ai_reply))
+
+for sender,msg in st.session_state.chat:
+    if sender=="You":
+        st.chat_message("user").write(msg)
+    else:
+        st.chat_message("assistant").write(msg)
+
+# ---------------- RESUME ANALYZER ----------------
+
+st.divider()
+st.header("📄 Resume Analyzer")
+
+file = st.file_uploader("Upload Resume", type=["pdf","txt"])
+
+if file:
+    st.success("Resume uploaded successfully")
+
+    suggested_roles = ["AI Engineer","ML Engineer","Data Scientist"]
+    st.write("**Recommended Roles:**")
+
+    for r in suggested_roles:
+        st.button(r)
+
+# ---------------- GRAPH ANALYTICS ----------------
+
+st.divider()
+st.header("📈 Performance Analytics")
+
+data = pd.DataFrame({
+    "Attempt":[1,2,3,4,5],
+    "Score":[5,6,7,7,9]
+})
+
+st.line_chart(data.set_index("Attempt"))
+
+confidence_data = pd.DataFrame({
+    "Session":[1,2,3,4,5],
+    "Confidence":[40,55,60,75,85]
+})
+
+st.bar_chart(confidence_data.set_index("Session"))
+
+# ---------------- NEXT QUESTION ----------------
+
+if st.button("Next Question"):
+    st.session_state.question = random.choice(questions[role])
+    st.rerun()
